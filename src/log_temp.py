@@ -14,7 +14,7 @@ import datetime
 # but it will not work in CircuitPython.
 dhtDevice = adafruit_dht.DHT11(board.D4, use_pulseio=False)
 
-data_path = "../data.txt"
+data_path = "../data/data.txt"
 
 tryAgain = True
 
@@ -33,7 +33,7 @@ while tryAgain:
         #    )
         #)
         print(f"{now} temp: {temperature_f}° hum: {humidity}%")
-        
+
         try:
             # check if new value is different from last recorded value
             with open(data_path, "r") as f:
@@ -51,7 +51,7 @@ while tryAgain:
 
                 with open(data_path, "a") as f:
                     f.write(f"{int(now.timestamp())} {temperature_f} {humidity} ({now})\n")
-                
+
         except ValueError as error:
             # if a line doesn't follow the format, (we might have added a comment), then ignore that and write a new line
             with open(data_path, "a") as f:
