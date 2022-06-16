@@ -52,7 +52,7 @@ while tryAgain:
                 with open(data_path, "a") as f:
                     f.write(f"{int(now.timestamp())} {temperature_f} {humidity} ({now})\n")
 
-        except ValueError as error:
+        except (ValueError, IndexError) as error:
             # if a line doesn't follow the format, (we might have added a comment), then ignore that and write a new line
             with open(data_path, "a") as f:
                 f.write(f"{int(now.timestamp())} {temperature_f} {humidity} ({now})\n")
