@@ -11,7 +11,7 @@ import json
 
 
 def fetch():
-    num_days = 9 # unknown what the maximum allowed value is; the highest example on the website is 56 days
+    num_days = 3 # unknown what the maximum allowed value is; the highest example on the website is 56 days
     data_url = f'https://weather.gladstonefamily.net/cgi-bin/wxobservations.pl?site=KMSP&days={num_days}'
     save_filepath = '../data/weather_data.json'
     data = download(data_url)
