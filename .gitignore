@@ -2,3 +2,4 @@ run.sh
 .DS_Store
 data.txt
 /data
+__pycache__
