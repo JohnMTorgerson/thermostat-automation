@@ -16,7 +16,7 @@ def get_and_log() :
     # but it will not work in CircuitPython.
     dhtDevice = adafruit_dht.DHT11(board.D4, use_pulseio=False)
 
-    data_path = "../data/data.txt"
+    data_path = "data/data.txt"
 
     tryAgain = True
 
