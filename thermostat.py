@@ -18,11 +18,13 @@ def run(client=None,plugs=[]) :
         # turn off A/C
         therm_logger.info(f'Temp is {temp}, {target-temp} degrees below target: TURNING A/C OFF')
         switchAC(value="off",client=client, plugs=plugs)
-
-    if temp >= target + hysteresis :
+    elif temp >= target + hysteresis :
         # turn on A/C
         therm_logger.info(f'Temp is {temp}, {temp-target} degrees above target: TURNING A/C ON')
         switchAC(value="on",client=client, plugs=plugs)
+    else :
+        # within hysteresis range, so do nothing
+        therm_logger.info(f"Temp is within hysteresis range ({abs(temp-target)} degrees away from target), not changing A/C state")
 
 
 def get_current_temp() :
