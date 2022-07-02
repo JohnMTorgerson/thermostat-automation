@@ -19,13 +19,17 @@ def run(client=None,plugs=[]) :
     if temp <= target - hysteresis :
         # turn off A/C
         therm_logger.info(f'Temp is {temp}, {target-temp} degrees below target: TURNING A/C OFF')
-        switchAC(value="off",client=client, plugs=plugs)
-        log_switch("OFF")
+        prev_val = switchAC(value="off",client=client, plugs=plugs)
+        # only log that we turned it off if it was previously on
+        if prev_val == "on" :
+            log_switch("OFF")
     elif temp >= target + hysteresis :
         # turn on A/C
         therm_logger.info(f'Temp is {temp}, {temp-target} degrees above target: TURNING A/C ON')
-        switchAC(value="on",client=client, plugs=plugs)
-        log_switch("ON")
+        prev_val = switchAC(value="on",client=client, plugs=plugs)
+        # only log that we turned it on if it was previously off
+        if prev_val == "off" :
+            log_switch("ON")
     else :
         # within hysteresis range, so do nothing
         therm_logger.info(f"Temp is within hysteresis range ({abs(temp-target)} degrees away from target), not changing A/C state")
@@ -58,13 +62,21 @@ def get_hysteresis() :
 
 
 def switchAC(value="",client=None, plugs=[]) :
+    previous_value = "off"
+
     therm_logger.debug(f"Turning {value} plugs:")
     for plug in plugs :
+        # if any of the plugs were on already, we return that to the calling function
+        if client.plugs.info(device_mac=plug.mac).is_on :
+            previous_value = "on"
+
         therm_logger.debug(plug.nickname)
         if value == "off" :
             client.plugs.turn_off(device_mac=plug.mac, device_model=plug.product.model)
         elif value == "on" :
             client.plugs.turn_on(device_mac=plug.mac, device_model=plug.product.model)
+
+    return previous_value
 
 def log_switch(value) :
     data_path = "scenes/basic/thermostat/data/data.txt"
