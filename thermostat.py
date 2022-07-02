@@ -1,5 +1,7 @@
 # print("__package__, __name__ ==", __package__, __name__)
 import logging
+from datetime import datetime
+
 # create logger
 therm_logger = logging.getLogger(f"main.{__name__}")
 
@@ -18,10 +20,12 @@ def run(client=None,plugs=[]) :
         # turn off A/C
         therm_logger.info(f'Temp is {temp}, {target-temp} degrees below target: TURNING A/C OFF')
         switchAC(value="off",client=client, plugs=plugs)
+        log_switch("OFF")
     elif temp >= target + hysteresis :
         # turn on A/C
         therm_logger.info(f'Temp is {temp}, {temp-target} degrees above target: TURNING A/C ON')
         switchAC(value="on",client=client, plugs=plugs)
+        log_switch("ON")
     else :
         # within hysteresis range, so do nothing
         therm_logger.info(f"Temp is within hysteresis range ({abs(temp-target)} degrees away from target), not changing A/C state")
@@ -61,6 +65,18 @@ def switchAC(value="",client=None, plugs=[]) :
             client.plugs.turn_off(device_mac=plug.mac, device_model=plug.product.model)
         elif value == "on" :
             client.plugs.turn_on(device_mac=plug.mac, device_model=plug.product.model)
+
+def log_switch(value) :
+    data_path = "scenes/basic/thermostat/data/data.txt"
+    now = datetime.now()
+    therm_logger.debug(f"writing into {data_path} that we turned A/C {value}...")
+    try :
+        with open(data_path, "a") as f:
+            f.write(f"{int(now.timestamp())} [TURNED A/C {value}] ({now})\n")
+            therm_logger.debug("...successfully wrote to file!")
+    except Exception as e :
+        therm_logger.error(f"Error: unable to log switch action to data file: {e}")
+
 
 if __name__ == "__main__" :
     run()
