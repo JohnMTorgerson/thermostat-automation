@@ -41,12 +41,12 @@ def get_current_temp() :
     return values["temp_f"]
 
 def get_temp_target() :
-    target = 75
+    target = 82
     therm_logger.info(f"Target temp is {target} degrees F")
     return target
 
 def get_hysteresis() :
-    hyst = 3
+    hyst = 2
     therm_logger.info(f"Hysteresis value is +/- {hyst} degrees F")
     return hyst
 
