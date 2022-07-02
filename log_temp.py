@@ -1,5 +1,7 @@
 # SPDX-FileCopyrightText: 2021 ladyada for Adafruit Industries
 # SPDX-License-Identifier: MIT
+# import pathlib
+# print(pathlib.Path().absolute())
 
 import time
 import board
@@ -16,7 +18,7 @@ def get_and_log(log=True) :
     # but it will not work in CircuitPython.
     dhtDevice = adafruit_dht.DHT11(board.D4, use_pulseio=False)
 
-    data_path = "data/data.txt"
+    data_path = "scenes/basic/thermostat/data/data.txt"
 
     tryAgain = True
 
