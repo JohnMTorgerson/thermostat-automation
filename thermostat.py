@@ -27,15 +27,15 @@ def run(client=None,plugs=[]) :
     # turn A/C on or off based on temp and humidity targets vs current sensor values
     if temp <= temp_target - temp_hyst and humidity <= hum_target - hum_hyst:
         # turn off A/C
-        therm_logger.info(f'Temp is {temp}, {(temp_target-temp):.1f} degrees below target; Humidity is {humidity}, {(hum_target-humidity):.1f} below target: TURNING A/C OFF')
+        therm_logger.info(f'Temp is {temp}, {(temp_target-temp):.1f}° below target; Humidity is {humidity}, {(hum_target-humidity):.1f} below target: TURNING A/C OFF')
         switchAC(value="off",client=client, plugs=plugs)
     elif temp > temp_target or humidity > hum_target:
         # turn on A/C
-        therm_logger.info(f'Temp is {temp}, {(temp-temp_target):.1f} degrees above target; Humidity is {humidity}, {(humidity-hum_target):.1f} above target: TURNING A/C ON')
+        therm_logger.info(f'Temp is {temp}, {(temp-temp_target):.1f}° above target; Humidity is {humidity}, {(humidity-hum_target):.1f} above target: TURNING A/C ON')
         switchAC(value="on",client=client, plugs=plugs)
     else :
         # within hysteresis range, so do nothing
-        therm_logger.info(f"Temp is within hysteresis range ({abs(temp-target):.1f} degrees away from target), not changing A/C state")
+        therm_logger.info(f"Temp and humidity are both within hysteresis range ({(temp_target-temp):.1f}° below temp target, {(hum_target-humidity):.1f} %-pts below humidity target), not changing A/C state")
 
 
 def get_current_values() :
@@ -57,7 +57,7 @@ def get_user_settings() :
     settings = {
         "temp_target" : 82,
         "temp_hyst" : 3,
-        "hum_target" : 44,
+        "hum_target" : 40,
         "hum_hyst" : 3
     }
 
