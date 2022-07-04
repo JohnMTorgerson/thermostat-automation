@@ -112,6 +112,9 @@ def log_switch(value) :
     except Exception as e :
         therm_logger.error(f"Error: unable to log switch action to data file: {e}")
 
+    # run get_current_values() again, just to make sure we log the current sensor values into the data file right after we switch the A/C on/off
+    get_current_values()
+
 
 if __name__ == "__main__" :
     run()
