@@ -40,8 +40,8 @@ def run(client=None,plugs=[]) :
 
 def get_current_values() :
     try :
-        from . import log_temp
-        values = log_temp.get_and_log()
+        from . import get_data
+        values = get_data.get_current() # gets current sensor values, but also logs them to ./data/data.txt
         therm_logger.info(f"CURRENT VALUES ==== temp_c:{values['temp_c']}, temp_f:{values['temp_f']}, humidity:{values['humidity']}")
     except ModuleNotFoundError as e :
         # if not running on raspberry pi with 'board' module, just try some test values

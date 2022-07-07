@@ -10,10 +10,9 @@ except:
 import json
 
 
-def fetch():
+def fetch(save_filepath='scenes/basic/thermostat/data/weather_data.json'):
     num_days = 7 # unknown what the maximum allowed value is; the highest example on the website is 56 days
     data_url = f'https://weather.gladstonefamily.net/cgi-bin/wxobservations.pl?site=KMSP&days={num_days}'
-    save_filepath = 'scenes/basic/thermostat/data/weather_data.json'
     data = download(data_url)
     dict_data = convert_to_dict(data)
     save_to_file(dict_data, save_filepath)
@@ -92,4 +91,4 @@ def save_to_file(new_data, filepath):
 
 
 if __name__ == "__main__" :
-    fetch()
+    fetch(save_filepath='data/weather_data.json')
