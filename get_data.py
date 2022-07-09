@@ -65,12 +65,12 @@ def get_current(log=True) :
                         print("different!!!!")
 
                         with open(sensor_data_filepath, "a") as f:
-                            f.write(f"{int(now.timestamp())} {temperature_f} {humidity} ({now})\n")
+                            f.write(f"{int(now.timestamp()*1000)} {temperature_f} {humidity} ({now})\n")
 
                 except (ValueError, IndexError) as error:
                     # if a line doesn't follow the format, (we might have added a comment), then ignore that and write a new line
                     with open(sensor_data_filepath, "a") as f:
-                        f.write(f"{int(now.timestamp())} {temperature_f} {humidity} ({now})\n")
+                        f.write(f"{int(now.timestamp()*1000)} {temperature_f} {humidity} ({now})\n")
 
         except RuntimeError as error:
             # Errors happen fairly often, DHT's are hard to read, just keep going
@@ -145,7 +145,7 @@ def get_logged_sensor_data(filepath=sensor_data_filepath,day_range=0) :
                 line_data = line.split()
                 try :
                     key = int(line_data[0])
-                    datapoint_time = datetime.datetime.fromtimestamp(key)
+                    datapoint_time = datetime.datetime.fromtimestamp(key/1000)
 
                     # if a day_range was given (an integer > 0), test if this datapoint is older than that day range, and ignore if it is
                     if day_range > 0 and now - delta > datapoint_time :

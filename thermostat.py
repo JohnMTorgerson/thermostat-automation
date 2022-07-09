@@ -107,7 +107,7 @@ def log_switch(value) :
     therm_logger.debug(f"writing into {data_path} that we turned A/C {value}...")
     try :
         with open(data_path, "a") as f:
-            f.write(f"{int(now.timestamp())} [TURNED A/C {value}] ({now})\n")
+            f.write(f"{int(now.timestamp()*1000)} [TURNED A/C {value}] ({now})\n")
             therm_logger.debug("...successfully wrote to file!")
     except Exception as e :
         therm_logger.error(f"Error: unable to log switch action to data file: {e}")
