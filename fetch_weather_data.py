@@ -48,7 +48,7 @@ def convert_to_dict(csv_data):
             continue
 
         # add row to dict_data_keyval using the Unix timestamp as a key
-        dict_data_keyval[round(time.timestamp())] = row
+        dict_data_keyval[round(time.timestamp()*1000)] = row
 
     print("Success formatting data")
 
