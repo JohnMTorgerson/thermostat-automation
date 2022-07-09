@@ -116,7 +116,7 @@ def get_logged_weather_data(filepath=weather_data_filepath,day_range=0) :
     if day_range > 0 :
         for key,value in data.items() :
             try :
-                datapoint_time = datetime.datetime.fromtimestamp(int(key))
+                datapoint_time = datetime.datetime.fromtimestamp(int(key)/1000)
             except Exception as e:
                 print(f'Unable to parse timestamp in line (skipping): {key} -- {e}')
                 continue
