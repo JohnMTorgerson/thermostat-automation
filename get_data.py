@@ -58,14 +58,25 @@ def get_current(log=True) :
                     print(f"Error: {error}")
 
                 try:
-                    if float(last_line[1]) != temperature_f or abs(float(last_line[2]) - humidity) > 1:
-                        #print(last_line)
-                        #print(float(last_line[1]))
-                        #print(float(last_line[2]))
-                        print("different!!!!")
+                    time_diff = (int(now.timestamp()*1000) - int(last_line[0])) / 1000 / 60
+                    temp_diff = abs(float(last_line[1]) - temperature_f)
+                    hum_diff = abs(float(last_line[2]) - humidity)
 
-                        with open(sensor_data_filepath, "a") as f:
-                            f.write(f"{int(now.timestamp()*1000)} {temperature_f} {humidity} ({now})\n")
+                    print(last_line)
+                    print(f'time_diff: {time_diff}\ntemp_diff: {temp_diff}\nhum_diff: {hum_diff}')
+
+                    # only log differences above the following thresholds
+                    if temp_diff >= 0.2 or hum_diff > 0:
+                        # print(last_line)
+                        # print(float(last_line[1]))
+                        # print(float(last_line[2]))
+                        # print("different!!!!")
+
+                        # and then only log every 10 minutes unless the following thresholds are met
+                        if time_diff > 10 or temp_diff >= 0.5 or hum_diff > 1:
+
+                            with open(sensor_data_filepath, "a") as f:
+                                f.write(f"{int(now.timestamp()*1000)} {temperature_f} {humidity} ({now})\n")
 
                 except (ValueError, IndexError) as error:
                     # if a line doesn't follow the format, (we might have added a comment), then ignore that and write a new line
@@ -174,9 +185,10 @@ def get_logged_sensor_data(filepath=sensor_data_filepath,day_range=0) :
     except FileNotFoundError as e:
         print("No existing data file found")
 
-    pprint(data)
+    # pprint(data)
 
     return data
 
 if __name__ == "__main__" :
     get_current()
+
