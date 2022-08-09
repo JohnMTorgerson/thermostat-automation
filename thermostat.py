@@ -55,10 +55,10 @@ def get_current_values() :
 
 def get_user_settings() :
     settings = {
-        "temp_target" : 82,
+        "temp_target" : 82, #80
         "temp_hyst" : 3,
-        "hum_target" : 40,
-        "hum_hyst" : 3
+        "hum_target" : 70, #35
+        "hum_hyst" : 4
     }
 
     therm_logger.info(f"Thermostat settings: {settings}")
