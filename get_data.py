@@ -11,8 +11,9 @@ import re
 weather_data_filepath = "scenes/basic/thermostat/data/weather_data.json"
 sensor_data_filepath = "scenes/basic/thermostat/data/data.txt"
 
-
+# get current temp and humidity values from sensors
 def get_current(log=True) :
+    # ====== get values from DHT sensor (digital sensor, does both temp and humidity) ====== #
     import board
     import adafruit_dht
 
@@ -30,58 +31,9 @@ def get_current(log=True) :
         try:
             now = datetime.datetime.now()
 
-            # === get the values === #
-
-            temperature_c = dhtDevice.temperature
-            temperature_f = round(temperature_c * (9 / 5) + 32,1)
+            # temp_c = dhtDevice.temperature
+            # temp_f = round(temp_c * (9 / 5) + 32,1)
             humidity = round(dhtDevice.humidity,1)
-            values = {
-                "temp_c": temperature_c,
-                "temp_f": temperature_f,
-                "humidity": humidity
-            }
-            #print(
-            #    "Temp: {:.1f} F / {:.1f} C    Humidity: {}% ".format(
-            #        temperature_f, temperature_c, humidity
-            #    )
-            #)
-            print(f"{now} temp: {temperature_f}° hum: {humidity}%")
-
-            # === log the values === #
-            if log == True :
-                try:
-                    # check if new value is different from last recorded value
-                    with open(sensor_data_filepath, "r") as f:
-                        last_line = f.readlines()[-1].split()
-                except Exception as error:
-                    last_line = [-1,-1,-1]
-                    print(f"Error: {error}")
-
-                try:
-                    time_diff = (int(now.timestamp()*1000) - int(last_line[0])) / 1000 / 60
-                    temp_diff = abs(float(last_line[1]) - temperature_f)
-                    hum_diff = abs(float(last_line[2]) - humidity)
-
-                    print(last_line)
-                    print(f'time_diff: {time_diff}\ntemp_diff: {temp_diff}\nhum_diff: {hum_diff}')
-
-                    # only log differences above the following thresholds
-                    if temp_diff >= 0.2 or hum_diff > 0:
-                        # print(last_line)
-                        # print(float(last_line[1]))
-                        # print(float(last_line[2]))
-                        # print("different!!!!")
-
-                        # and then only log every 10 minutes unless the following thresholds are met
-                        if time_diff > 10 or temp_diff >= 0.5 or hum_diff > 1:
-
-                            with open(sensor_data_filepath, "a") as f:
-                                f.write(f"{int(now.timestamp()*1000)} {temperature_f} {humidity} ({now})\n")
-
-                except (ValueError, IndexError) as error:
-                    # if a line doesn't follow the format, (we might have added a comment), then ignore that and write a new line
-                    with open(sensor_data_filepath, "a") as f:
-                        f.write(f"{int(now.timestamp()*1000)} {temperature_f} {humidity} ({now})\n")
 
         except RuntimeError as error:
             # Errors happen fairly often, DHT's are hard to read, just keep going
@@ -97,6 +49,80 @@ def get_current(log=True) :
             raise error
 
         tryAgain = False
+
+    # ====== get values from analog temp sensor (through ADS1115 analog-digital converter) ====== #
+    # we'll use these temperature values instead of those from the DHT sensor, as they are more precise
+    # (though we will still use the humidity values from the DHT sensor, since the analog sensor only does temperature)
+    import busio
+    import adafruit_ads1x15.ads1115 as ADS
+    from adafruit_ads1x15.analog_in import AnalogIn
+
+    # Create the I2C bus
+    i2c = busio.I2C(board.SCL, board.SDA)
+
+    # Create the ADC object using the I2C bus
+    ads = ADS.ADS1115(i2c)
+    # you can specify an I2C adress instead of the default 0x48
+    # ads = ADS.ADS1115(i2c, address=0x49)
+
+    # Create single-ended input on channel 0
+    chan = AnalogIn(ads, ADS.P0)
+
+    # Create differential input between channel 0 and 1
+    # chan = AnalogIn(ads, ADS.P0, ADS.P1)
+
+    # print("{:>5}\t{:>5}".format("raw", "v"))
+
+    temp = chan.voltage * 100
+
+    temp_c = round(temp,1)
+    temp_f = round(temp * 9/5 + 32,1)
+
+
+    # ====== store the values ====== #
+    values = {
+        "temp_c": temp_c,
+        "temp_f": temp_f,
+        "humidity": humidity
+    }
+    print(f"{now} temp: {temp_f}° hum: {humidity}%")
+
+
+    # ====== save the values to file ====== #
+    if log == True :
+        try:
+            # check if new value is different from last recorded value
+            with open(sensor_data_filepath, "r") as f:
+                last_line = f.readlines()[-1].split()
+        except Exception as error:
+            last_line = [-1,-1,-1]
+            print(f"Error: {error}")
+
+        try:
+            time_diff = (int(now.timestamp()*1000) - int(last_line[0])) / 1000 / 60
+            temp_diff = abs(float(last_line[1]) - temp_f)
+            hum_diff = abs(float(last_line[2]) - humidity)
+
+            print(last_line)
+            print(f'time_diff: {time_diff}\ntemp_diff: {temp_diff}\nhum_diff: {hum_diff}')
+
+            # only log differences above the following thresholds
+            if temp_diff >= 0.2 or hum_diff > 0:
+                # print(last_line)
+                # print(float(last_line[1]))
+                # print(float(last_line[2]))
+                # print("different!!!!")
+
+                # and then only log every 10 minutes unless the following thresholds are met
+                if time_diff > 10 or temp_diff >= 0.5 or hum_diff > 1:
+
+                    with open(sensor_data_filepath, "a") as f:
+                        f.write(f"{int(now.timestamp()*1000)} {temp_f} {humidity} ({now})\n")
+
+        except (ValueError, IndexError) as error:
+            # if a line doesn't follow the format, (we might have added a comment), then ignore that and write a new line
+            with open(sensor_data_filepath, "a") as f:
+                f.write(f"{int(now.timestamp()*1000)} {temp_f} {humidity} ({now})\n")
 
     return values
 
@@ -191,4 +217,3 @@ def get_logged_sensor_data(filepath=sensor_data_filepath,day_range=0) :
 
 if __name__ == "__main__" :
     get_current()
-
