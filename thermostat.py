@@ -56,8 +56,8 @@ def get_current_values() :
 
 def get_user_settings() :
     settings = {
-        "temp_hum_cutoff" : 78, # when below this temp, humidity does not trigger a state change
-        "temp_target" : 82, #80
+        "temp_hum_cutoff" : 80, # when below this temp, humidity does not trigger a state change
+        "temp_target" : 84, #80
         "temp_hyst" : 3,
         "hum_target" : 45, #35
         "hum_hyst" : 4
