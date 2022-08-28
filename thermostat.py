@@ -1,6 +1,7 @@
 # print("__package__, __name__ ==", __package__, __name__)
 import logging
 from datetime import datetime
+import json
 
 # create logger
 therm_logger = logging.getLogger(f"main.{__name__}")
@@ -55,13 +56,19 @@ def get_current_values() :
     return values
 
 def get_user_settings() :
-    settings = {
-        "temp_hum_cutoff" : 80, # when below this temp, humidity does not trigger a state change
-        "temp_target" : 84, #80
-        "temp_hyst" : 3,
-        "hum_target" : 45, #35
-        "hum_hyst" : 4
-    }
+    try:
+        with open("scenes/basic/thermostat/settings.json", "r") as f :
+            settings = json.load(f)
+    except Exception as e:
+        therm_logger.error(f"Error: Unable to retrieve thermostat settings from file. Temporarily using defaults\n{e}")
+        # values designed to keep the A/C off until the problem is fixed
+        settings = {
+            "temp_hum_cutoff" : 100,
+            "temp_target" : 100,
+            "temp_hyst" : 1,
+            "hum_target" : 100,
+            "hum_hyst" : 1
+        }
 
     therm_logger.info(f"Thermostat settings: {settings}")
 

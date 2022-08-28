@@ -107,7 +107,7 @@ def get_current(log=True) :
             print(f'time_diff: {time_diff}\ntemp_diff: {temp_diff}\nhum_diff: {hum_diff}')
 
             # only log differences above the following thresholds
-            if temp_diff >= 0.2 or hum_diff > 0:
+            if temp_diff >= 0.2 or hum_diff > 0 or time_diff > 30:
                 # print(last_line)
                 # print(float(last_line[1]))
                 # print(float(last_line[2]))
