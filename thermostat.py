@@ -26,6 +26,12 @@ def run(client=None,plugs=[]) :
     temp_hyst = settings["temp_hyst"]
     hum_hyst = settings["hum_hyst"]
 
+    # if thermostat is set to off, turn A/C off and return
+    if (settings["on"] == False) :
+        therm_logger.info(f'************* THERMOSTAT IS SET TO OFF, (turning A/C off)')
+        switchAC(value="off",client=client, plugs=plugs)
+        return
+
     # turn A/C on or off based on temp and humidity targets vs current sensor values
     if (temp <= temp_target - temp_hyst) and (humidity <= hum_target - hum_hyst or temp < temp_hum_cutoff):
         # turn off A/C
@@ -63,6 +69,7 @@ def get_user_settings() :
         therm_logger.error(f"Error: Unable to retrieve thermostat settings from file. Temporarily using defaults\n{e}")
         # values designed to keep the A/C off until the problem is fixed
         settings = {
+            "on" : False,
             "temp_hum_cutoff" : 100,
             "temp_target" : 100,
             "temp_hyst" : 1,
