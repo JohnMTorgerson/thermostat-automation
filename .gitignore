@@ -2,4 +2,5 @@ run.sh
 .DS_Store
 data.txt
 /data
+/screenshots
 __pycache__
