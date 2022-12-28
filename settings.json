@@ -1,1 +1,1 @@
-{"on": false, "temp_hum_cutoff": 80, "temp_target": 74, "temp_hyst": 3, "hum_target": 55, "hum_hyst": 4}
+{"on": false, "temp_hum_cutoff": 72, "temp_target": 83, "temp_hyst": 3, "hum_target": 65, "hum_hyst": 4}
