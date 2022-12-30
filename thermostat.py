@@ -54,19 +54,19 @@ def run(client=None,plugs={}) :
 
     # turn Humidifier on or off based on temp and humidity targets vs current sensor values
     def run_Humidifier() :
-        # if above minimum (plus hysteresis value) turn humidifier off
-        if (humidity >= hum_min + hum_hyst):
+        # if above minimum turn humidifier off
+        if (humidity >= hum_min):
             # turn off Humidifier
             therm_logger.info(f'Humidity is {humidity}, {(humidity-hum_min):.1f} above min: TURNING HUMIDIFIER OFF')
             switchHumidifier(value="off",client=client, plugs=plugs)
-        # else if below minimum, turn humidifier on
-        elif (humidity < hum_min):
+        # else if below minimum, minus hysteresis value, turn humidifier on
+        elif (humidity < hum_min - hum_hyst):
             # turn on Humidifier
             therm_logger.info(f'Humidity is {humidity}, {(humidity-hum_min):.1f} below min: TURNING HUMIDIFIER ON')
             switchHumidifier(value="on",client=client, plugs=plugs)
         else :
-            # within hysteresis range, so do nothing
-            therm_logger.info(f"Humidity is above minimum and within hysteresis range ({hum_min}% <= {(humidity):.1f}% < {hum_min + hum_hyst}%, not changing Humidifier state")
+            # within hysteresis range, so do nothing, do not change state
+            therm_logger.info(f"Humidity is below minimum but within hysteresis range ({hum_min - hum_hyst}% <= {(humidity):.1f}% < {hum_min}%, not changing Humidifier state")
 
     # run A/C (if thresholds merit)
     run_AC()
