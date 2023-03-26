@@ -2,10 +2,10 @@
     "on": true,
     "show_weather_graph": false,
     "show_weather_values": false,
-    "temp_hum_cutoff": 80,
+    "temp_hum_cutoff": 100,
     "temp_target": 87,
     "temp_hyst": 3,
-    "hum_max": 32,
-    "hum_min": 28,
-    "hum_hyst": 4
+    "hum_max": 50,
+    "hum_min": 40,
+    "hum_hyst": 3
 }

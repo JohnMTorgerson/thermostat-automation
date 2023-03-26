@@ -3,6 +3,7 @@
 import pathlib
 print(pathlib.Path().absolute())
 
+import board
 import time
 import json
 import datetime
@@ -13,42 +14,42 @@ sensor_data_filepath = "scenes/basic/thermostat/data/data.txt"
 
 # get current temp and humidity values from sensors
 def get_current(log=True) :
-    # ====== get values from DHT sensor (digital sensor, does both temp and humidity) ====== #
-    import board
-    import adafruit_dht
-
-    # Initial the dht device, with data pin connected to:
-    # dhtDevice = adafruit_dht.DHT11(board.D4)
-
-    # you can pass DHT22 use_pulseio=False if you wouldn't like to use pulseio.
-    # This may be necessary on a Linux single board computer like the Raspberry Pi,
-    # but it will not work in CircuitPython.
-    dhtDevice = adafruit_dht.DHT11(board.D4, use_pulseio=False)
-
-    tryAgain = True
-
-    while tryAgain:
-        try:
-            now = datetime.datetime.now()
-
-            # temp_c = dhtDevice.temperature
-            # temp_f = round(temp_c * (9 / 5) + 32,1)
-            humidity = round(dhtDevice.humidity,1)
-
-        except RuntimeError as error:
-            # Errors happen fairly often, DHT's are hard to read, just keep going
-            print(error.args[0])
-            time.sleep(1.0)
-            continue
-        except TypeError as error:
-            print(f"No values: {error.args[0]}")
-            time.sleep(3.0)
-            continue
-        except Exception as error:
-            dhtDevice.exit()
-            raise error
-
-        tryAgain = False
+#    # ====== get values from DHT sensor (digital sensor, does both temp and humidity) ====== #
+#    import board
+#    import adafruit_dht
+#
+#    # Initial the dht device, with data pin connected to:
+#    # dhtDevice = adafruit_dht.DHT11(board.D4)
+#
+#    # you can pass DHT22 use_pulseio=False if you wouldn't like to use pulseio.
+#    # This may be necessary on a Linux single board computer like the Raspberry Pi,
+#    # but it will not work in CircuitPython.
+#    dhtDevice = adafruit_dht.DHT11(board.D4, use_pulseio=False)
+#
+#    tryAgain = True
+#
+#    while tryAgain:
+#        try:
+#            now = datetime.datetime.now()
+#
+#            # temp_c = dhtDevice.temperature
+#            # temp_f = round(temp_c * (9 / 5) + 32,1)
+#            humidity = round(dhtDevice.humidity,1)
+#
+#        except RuntimeError as error:
+#            # Errors happen fairly often, DHT's are hard to read, just keep going
+#            print(error.args[0])
+#            time.sleep(1.0)
+#            continue
+#        except TypeError as error:
+#            print(f"No values: {error.args[0]}")
+#            time.sleep(3.0)
+#            continue
+#        except Exception as error:
+#            dhtDevice.exit()
+#            raise error
+#
+#        tryAgain = False
 
     # ====== get values from analog temp sensor (through ADS1115 analog-digital converter) ====== #
     # we'll use these temperature values instead of those from the DHT sensor, as they are more precise
@@ -79,7 +80,18 @@ def get_current(log=True) :
     temp_f = round(temp * 9/5 + 32,1)
 
 
+    # ========================================
+    # get values from AHT20 sensor
+    import adafruit_ahtx0
+    sensor = adafruit_ahtx0.AHTx0(i2c)
+    # only get humidity for now, continue using analog temp sensor for temp
+    # temp_c = sensor.temperature
+    humidity = round(sensor.relative_humidity,1)
+
+
     # ====== store the values ====== #
+    now = datetime.datetime.now()
+
     values = {
         "temp_c": temp_c,
         "temp_f": temp_f,
