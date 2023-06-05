@@ -4,55 +4,59 @@ import pathlib
 print(pathlib.Path().absolute())
 
 import time
+import board
 import json
 import datetime
 from pprint import pprint
 import re
+# import estimate_abs_hum
 weather_data_filepath = "scenes/basic/thermostat/data/weather_data.json"
 sensor_data_filepath = "scenes/basic/thermostat/data/data.txt"
 
 # get current temp and humidity values from sensors
 def get_current(log=True) :
-    # ====== get values from DHT sensor (digital sensor, does both temp and humidity) ====== #
-    import board
-    import adafruit_dht
+    # no longer using DHT11 sensor; using analog sensor for temp, and AHT20 for humidity, as they are both more accurate
+    # # ========================================
+    # # get values from DHT sensor (digital sensor, does both temp and humidity) ====== #
+    # import board
+    # import adafruit_dht
 
-    # Initial the dht device, with data pin connected to:
-    # dhtDevice = adafruit_dht.DHT11(board.D4)
+    # # Initial the dht device, with data pin connected to:
+    # # dhtDevice = adafruit_dht.DHT11(board.D4)
 
-    # you can pass DHT22 use_pulseio=False if you wouldn't like to use pulseio.
-    # This may be necessary on a Linux single board computer like the Raspberry Pi,
-    # but it will not work in CircuitPython.
-    dhtDevice = adafruit_dht.DHT11(board.D4, use_pulseio=False)
+    # # you can pass DHT22 use_pulseio=False if you wouldn't like to use pulseio.
+    # # This may be necessary on a Linux single board computer like the Raspberry Pi,
+    # # but it will not work in CircuitPython.
+    # dhtDevice = adafruit_dht.DHT11(board.D4, use_pulseio=False)
 
-    tryAgain = True
+    # tryAgain = True
 
-    while tryAgain:
-        try:
-            now = datetime.datetime.now()
+    # while tryAgain:
+    #     try:
+    #         now = datetime.datetime.now()
 
-            # temp_c = dhtDevice.temperature
-            # temp_f = round(temp_c * (9 / 5) + 32,1)
-            humidity = round(dhtDevice.humidity,1)
+    #         # temp_c = dhtDevice.temperature
+    #         # temp_f = round(temp_c * (9 / 5) + 32,1)
+    #         rel_hum = round(dhtDevice.humidity,1)
 
-        except RuntimeError as error:
-            # Errors happen fairly often, DHT's are hard to read, just keep going
-            print(error.args[0])
-            time.sleep(1.0)
-            continue
-        except TypeError as error:
-            print(f"No values: {error.args[0]}")
-            time.sleep(3.0)
-            continue
-        except Exception as error:
-            dhtDevice.exit()
-            raise error
+    #     except RuntimeError as error:
+    #         # Errors happen fairly often, DHT's are hard to read, just keep going
+    #         print(error.args[0])
+    #         time.sleep(1.0)
+    #         continue
+    #     except TypeError as error:
+    #         print(f"No values: {error.args[0]}")
+    #         time.sleep(3.0)
+    #         continue
+    #     except Exception as error:
+    #         dhtDevice.exit()
+    #         raise error
 
-        tryAgain = False
+    #     tryAgain = False
 
-    # ====== get values from analog temp sensor (through ADS1115 analog-digital converter) ====== #
+    # ========================================
+    # get values from analog temp sensor (through ADS1115 analog-digital converter) ====== #
     # we'll use these temperature values instead of those from the DHT sensor, as they are more precise
-    # (though we will still use the humidity values from the DHT sensor, since the analog sensor only does temperature)
     import busio
     import adafruit_ads1x15.ads1115 as ADS
     from adafruit_ads1x15.analog_in import AnalogIn
@@ -78,14 +82,27 @@ def get_current(log=True) :
     temp_c = round(temp,1)
     temp_f = round(temp * 9/5 + 32,1)
 
+    # ========================================
+    # get values from AHT20 sensor
+    import adafruit_ahtx0
+    sensor = adafruit_ahtx0.AHTx0(i2c)
+    # only get humidity for now, continue using analog temp sensor for temp
+    # temp_c = sensor.temperature
+    rel_hum = round(sensor.relative_humidity,1)
+
+
+    # abs_hum = estimate_abs_hum.estimate(rel_hum,temp_c)
+
 
     # ====== store the values ====== #
     values = {
         "temp_c": temp_c,
         "temp_f": temp_f,
-        "humidity": humidity
+        "rel_hum": rel_hum,
+        "abs_hum": 0#abs_hum
     }
-    print(f"{now} temp: {temp_f}° hum: {humidity}%")
+    now = datetime.datetime.now()
+    print(f"{now} temp: {temp_f}° F ({temp_c}° C), rel_hum: {rel_hum}%")# abs_hum: {abs_hum}g/m³")
 
 
     # ====== save the values to file ====== #
@@ -101,28 +118,28 @@ def get_current(log=True) :
         try:
             time_diff = (int(now.timestamp()*1000) - int(last_line[0])) / 1000 / 60
             temp_diff = abs(float(last_line[1]) - temp_f)
-            hum_diff = abs(float(last_line[2]) - humidity)
+            rel_hum_diff = abs(float(last_line[2]) - rel_hum)
 
             print(last_line)
-            print(f'time_diff: {time_diff}\ntemp_diff: {temp_diff}\nhum_diff: {hum_diff}')
+            print(f'time_diff: {time_diff}\ntemp_diff: {temp_diff}\nhum_diff: {rel_hum_diff}')
 
             # only log differences above the following thresholds
-            if temp_diff >= 0.2 or hum_diff > 0 or time_diff > 30:
+            if temp_diff >= 0.2 or rel_hum_diff > 0 or time_diff > 30:
                 # print(last_line)
                 # print(float(last_line[1]))
                 # print(float(last_line[2]))
                 # print("different!!!!")
 
                 # and then only log every 10 minutes unless the following thresholds are met
-                if time_diff > 10 or temp_diff >= 0.5 or hum_diff > 1:
+                if time_diff > 10 or temp_diff >= 0.5 or rel_hum_diff > 1:
 
                     with open(sensor_data_filepath, "a") as f:
-                        f.write(f"{int(now.timestamp()*1000)} {temp_f} {humidity} ({now})\n")
+                        f.write(f"{int(now.timestamp()*1000)} {temp_f} {rel_hum} ({now})\n")
 
         except (ValueError, IndexError) as error:
             # if a line doesn't follow the format, (we might have added a comment), then ignore that and write a new line
             with open(sensor_data_filepath, "a") as f:
-                f.write(f"{int(now.timestamp()*1000)} {temp_f} {humidity} ({now})\n")
+                f.write(f"{int(now.timestamp()*1000)} {temp_f} {rel_hum} ({now})\n")
 
     return values
 
@@ -194,7 +211,7 @@ def get_logged_sensor_data(filepath=sensor_data_filepath,day_range=0) :
                 try :
                     data[key] = {
                         "temp" : float(line_data[1]),
-                        "humidity" : float(line_data[2])
+                        "rel_hum" : float(line_data[2])
                     }
                 except IndexError as e:
                     print(f'Unable to parse line (skipping): {line} -- {e}')

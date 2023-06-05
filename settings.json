@@ -2,10 +2,14 @@
     "on": true,
     "show_weather_graph": false,
     "show_weather_values": false,
-    "temp_hum_cutoff": 80,
-    "temp_target": 87,
-    "temp_hyst": 3,
-    "hum_max": 32,
-    "hum_min": 28,
-    "hum_hyst": 4
+    "temp_hum_cutoff": 100,
+    "temp_target": 83,
+    "temp_hyst": 2,
+    "rel_hum_max": 48,
+    "rel_hum_min": 25,
+    "rel_hum_hyst": 3,
+    "use_abs_humidity": false,
+    "abs_hum_max": 14.0,
+    "abs_hum_min": 8.8,
+    "abs_hum_hyst": 0.8
 }

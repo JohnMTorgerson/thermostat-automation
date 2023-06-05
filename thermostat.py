@@ -17,19 +17,32 @@ def run(client=None,plugs={}) :
 
     therm_logger.info("Running thermostat scene...")
 
+    # get thermostat settings
+    settings = get_user_settings()
+
     # get current values from sensor(s)
     values = get_current_values()
     temp = values["temp_f"]
-    humidity = values["humidity"]
+    if settings["use_abs_humidity"] :
+        humidity = values["abs_hum"]
+    else :
+        humidity = values["rel_hum"]
+
 
     # get target values set by user for both temp and humidity
-    settings = get_user_settings()
     temp_hum_cutoff =   settings["temp_hum_cutoff"]
     temp_target =       settings["temp_target"]
-    hum_max =           settings["hum_max"]
-    hum_min =           settings["hum_min"]
     temp_hyst =         settings["temp_hyst"]
-    hum_hyst =          settings["hum_hyst"]
+    if settings["use_abs_humidity"] :
+        hum_units = "g/m³"
+        hum_max =           settings["abs_hum_max"]
+        hum_min =           settings["abs_hum_min"]
+        hum_hyst =          settings["abs_hum_hyst"]
+    else :
+        hum_units = "%"
+        hum_max =           settings["rel_hum_max"]
+        hum_min =           settings["rel_hum_min"]
+        hum_hyst =          settings["rel_hum_hyst"]
 
     # if thermostat is set to off, turn plugs off and return
     if (settings["on"] == False) :
@@ -50,23 +63,23 @@ def run(client=None,plugs={}) :
             switchAC(value="on",client=client, plugs=plugs)
         else :
             # within hysteresis range, so do nothing
-            therm_logger.info(f"Temp and humidity are both below target or within hysteresis range ({(temp_target-temp):.1f}° below temp target, {(hum_max-humidity):.1f} %-pts below humidity target), not changing A/C state")
+            therm_logger.info(f"Temp and humidity are both below target or within hysteresis range ({(temp_target-temp):.1f}° below temp target, {(hum_max-humidity):.1f} {hum_units} below humidity target), not changing A/C state")
 
     # turn Humidifier on or off based on temp and humidity targets vs current sensor values
     def run_Humidifier() :
         # if above minimum turn humidifier off
         if (humidity >= hum_min):
             # turn off Humidifier
-            therm_logger.info(f'Humidity is {humidity}, {(humidity-hum_min):.1f} above min: TURNING HUMIDIFIER OFF')
+            therm_logger.info(f'Humidity is {humidity:.2f}, {(humidity-hum_min):.2f} above min: TURNING HUMIDIFIER OFF')
             switchHumidifier(value="off",client=client, plugs=plugs)
         # else if below minimum, minus hysteresis value, turn humidifier on
         elif (humidity < hum_min - hum_hyst):
             # turn on Humidifier
-            therm_logger.info(f'Humidity is {humidity}, {(humidity-hum_min):.1f} below min: TURNING HUMIDIFIER ON')
+            therm_logger.info(f'Humidity is {humidity:.2f}, {(humidity-hum_min):.2f} below min: TURNING HUMIDIFIER ON')
             switchHumidifier(value="on",client=client, plugs=plugs)
         else :
             # within hysteresis range, so do nothing, do not change state
-            therm_logger.info(f"Humidity is below minimum but within hysteresis range ({hum_min - hum_hyst}% <= {(humidity):.1f}% < {hum_min}%, not changing Humidifier state")
+            therm_logger.info(f"Humidity is below minimum but within hysteresis range ({hum_min - hum_hyst:.2f}{hum_units} <= {(humidity):.2f}{hum_units} < {hum_min}{hum_units}, not changing Humidifier state")
 
     # run A/C (if thresholds merit)
     run_AC()
@@ -79,13 +92,14 @@ def get_current_values() :
     try :
         from . import get_data
         values = get_data.get_current() # gets current sensor values, but also logs them to ./data/data.txt
-        therm_logger.info(f"CURRENT VALUES ==== temp_c:{values['temp_c']}, temp_f:{values['temp_f']}, humidity:{values['humidity']}")
+        therm_logger.info(f"CURRENT VALUES ==== temp_c:{values['temp_c']}, temp_f:{values['temp_f']}, rel_hum:{values['rel_hum']}, abs_hum:{values['abs_hum']}")
     except ModuleNotFoundError as e :
         # if not running on raspberry pi with 'board' module, just try some test values
-        values = {'temp_c': 24, 'temp_f': 80.6, 'humidity': 45}
-        therm_logger.error(f"Error: not running on raspberry pi, using test values: temp_c:{values['temp_c']}, temp_f:{values['temp_f']}, humidity:{values['humidity']}")
+        values = {'temp_c': 24, 'temp_f': 80.6, 'rel_hum': 45, 'abs_hum': 11.55}
+        therm_logger.error(f"Error: not running on raspberry pi, using test values: temp_c:{values['temp_c']}, temp_f:{values['temp_f']}, rel_hum:{values['rel_hum']}, abs_hum:{values['abs_hum']}")
+        therm_logger.error(repr(e))
     except Exception as e :
-        therm_logger.error(f"Other error getting temp/humidity values: {e}")
+        therm_logger.error(f"Other error getting temp/humidity values: {repr(e)}")
         raise e
 
     return values
@@ -102,30 +116,18 @@ def get_user_settings() :
             "temp_hum_cutoff" : 100,
             "temp_target" : 212,
             "temp_hyst" : 1,
-            "hum_max" : 100,
-            "hum_min" : 0,
-            "hum_hyst" : 1
+            "rel_hum_max" : 100,
+            "rel_hum_min" : 0,
+            "rel_hum_hyst" : 1,
+            "use_abs_hum" : False,
+            "abs_hum_max": 1000.0,
+            "abs_hum_min": 0.0,
+            "abs_hum_hyst": 1.0
         }
 
     therm_logger.info(f"Thermostat settings: {settings}")
 
     return settings
-
-# def get_temp_target() :
-#     target = 82
-#     therm_logger.info(f"Target temp is {target} degrees F")
-#     return target
-#
-# def get_hum_target() :
-#     target = 44
-#     therm_logger.info(f"Target humidity is {target}%")
-#     return target
-#
-#
-# def get_hysteresis() :
-#     hyst = 3
-#     therm_logger.info(f"Hysteresis value is -{hyst} degrees F")
-#     return hyst
 
 def switchAC(value="", client=None, plugs=[]) :
     previous_value = "off"
