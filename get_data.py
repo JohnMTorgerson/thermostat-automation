@@ -3,6 +3,7 @@
 import pathlib
 print(pathlib.Path().absolute())
 
+import board
 import time
 import board
 import json
@@ -95,6 +96,7 @@ def get_current(log=True) :
 
 
     # ====== store the values ====== #
+
     values = {
         "temp_c": temp_c,
         "temp_f": temp_f,
