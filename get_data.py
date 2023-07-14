@@ -2,10 +2,7 @@
 # SPDX-License-Identifier: MIT
 import pathlib
 print(pathlib.Path().absolute())
-
-import board
 import time
-import board
 import json
 import datetime
 from pprint import pprint
@@ -16,6 +13,18 @@ sensor_data_filepath = "scenes/basic/thermostat/data/data.txt"
 
 # get current temp and humidity values from sensors
 def get_current(log=True) :
+    try:
+        import board
+    except NotImplementedError as e:
+        print("get_data.get_current unable to import board module; passing fake values")
+        return {
+            "temp_c": 0,
+            "temp_f": 0,
+            "rel_hum": 0,
+            "abs_hum": 0
+        }
+
+
     # no longer using DHT11 sensor; using analog sensor for temp, and AHT20 for humidity, as they are both more accurate
     # # ========================================
     # # get values from DHT sensor (digital sensor, does both temp and humidity) ====== #
