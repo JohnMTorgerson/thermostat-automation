@@ -2,6 +2,12 @@
 import logging
 from datetime import datetime
 import json
+import os
+import inspect
+
+# actual path of the script's directory, regardless of where it's being called from
+path_ = os.path.dirname(inspect.getabsfile(inspect.currentframe()))
+
 
 # create logger
 therm_logger = logging.getLogger(f"main.{__name__}")
@@ -106,7 +112,7 @@ def get_current_values() :
 
 def get_user_settings() :
     try:
-        with open("scenes/basic/thermostat/settings.json", "r") as f :
+        with open(f"{path_}/settings.json", "r") as f :
             settings = json.load(f)
     except Exception as e:
         therm_logger.error(f"Error: Unable to retrieve thermostat settings from file. Temporarily using defaults\n{e}")
