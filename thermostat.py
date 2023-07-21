@@ -10,7 +10,7 @@ path_ = os.path.dirname(inspect.getabsfile(inspect.currentframe()))
 
 
 # create logger
-therm_logger = logging.getLogger(f"main.{__name__}")
+therm_logger = logging.getLogger(f"HA.{__name__}")
 
 
 def run(client=None,plugs={}) :
