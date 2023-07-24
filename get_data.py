@@ -1,5 +1,6 @@
-# SPDX-FileCopyrightText: 2021 ladyada for Adafruit Industries
-# SPDX-License-Identifier: MIT
+import logging
+import os
+import inspect
 import pathlib
 print(pathlib.Path().absolute())
 import time
@@ -8,22 +9,19 @@ import datetime
 from pprint import pprint
 import re
 # import estimate_abs_hum
-weather_data_filepath = "scenes/basic/thermostat/data/weather_data.json"
-sensor_data_filepath = "scenes/basic/thermostat/data/data.txt"
+
+# create logger
+logger = logging.getLogger(f"HA.{__name__}")
+
+# actual path of the script's directory, regardless of where it's being called from
+path_ = os.path.dirname(inspect.getabsfile(inspect.currentframe()))
+
+weather_data_filepath = f"{path_}/data/weather_data.json"
+sensor_data_filepath = f"{path_}/data/data.txt"
 
 # get current temp and humidity values from sensors
 def get_current(log=True) :
-    try:
-        import board
-    except NotImplementedError as e:
-        print("get_data.get_current unable to import board module; passing fake values")
-        return {
-            "temp_c": 0,
-            "temp_f": 0,
-            "rel_hum": 0,
-            "abs_hum": 0
-        }
-
+    import board
 
     # no longer using DHT11 sensor; using analog sensor for temp, and AHT20 for humidity, as they are both more accurate
     # # ========================================
@@ -113,26 +111,28 @@ def get_current(log=True) :
         "abs_hum": 0#abs_hum
     }
     now = datetime.datetime.now()
-    print(f"{now} temp: {temp_f}° F ({temp_c}° C), rel_hum: {rel_hum}%")# abs_hum: {abs_hum}g/m³")
+    # print(f"{now} temp: {temp_f}° F ({temp_c}° C), rel_hum: {rel_hum}%")# abs_hum: {abs_hum}g/m³")
 
 
     # ====== save the values to file ====== #
     if log == True :
+        new_record = f"{int(now.timestamp()*1000)} {temp_f} {rel_hum} ({now})\n"
+
         try:
             # check if new value is different from last recorded value
             with open(sensor_data_filepath, "r") as f:
                 last_line = f.readlines()[-1].split()
-        except Exception as error:
+        except Exception as e:
             last_line = [-1,-1,-1]
-            print(f"Error: {error}")
+            logger.error(f"Unable to write sensor data to data.txt — {repr(e)}")
 
         try:
             time_diff = (int(now.timestamp()*1000) - int(last_line[0])) / 1000 / 60
             temp_diff = abs(float(last_line[1]) - temp_f)
             rel_hum_diff = abs(float(last_line[2]) - rel_hum)
 
-            print(last_line)
-            print(f'time_diff: {time_diff}\ntemp_diff: {temp_diff}\nhum_diff: {rel_hum_diff}')
+            logger.debug(f"last sensor record: {last_line}")
+            logger.debug(f'Differences:\ntime_diff: {time_diff}\ntemp_diff: {temp_diff}\nhum_diff: {rel_hum_diff}')
 
             # only log differences above the following thresholds
             if temp_diff >= 0.2 or rel_hum_diff > 0 or time_diff > 30:
@@ -145,45 +145,51 @@ def get_current(log=True) :
                 if time_diff > 10 or temp_diff >= 0.5 or rel_hum_diff > 1:
 
                     with open(sensor_data_filepath, "a") as f:
-                        f.write(f"{int(now.timestamp()*1000)} {temp_f} {rel_hum} ({now})\n")
+                        f.write(new_record)
 
         except (ValueError, IndexError) as error:
             # if a line doesn't follow the format, (we might have added a comment), then ignore that and write a new line
             with open(sensor_data_filepath, "a") as f:
-                f.write(f"{int(now.timestamp()*1000)} {temp_f} {rel_hum} ({now})\n")
+                f.write(new_record)
 
     return values
 
 # get weather data
-def get_logged_weather_data(filepath=weather_data_filepath,day_range=0) :
+def get_logged_weather_data(filepath=weather_data_filepath,day_range=0,hour_range=0) :
+    if day_range > 0 and hour_range > 0 :
+        raise ValueError("Must either pass day_range or hour_range (or neither), but not both")
+
     # open existing file and get old data
     try:
         with open(filepath,'r') as f:
             try:
                 data = json.load(f)
             except json.decoder.JSONDecodeError as e:
-                print(f'Error loading data from {filepath}: {e}')
+                logger.error(f'Error loading weather data from {filepath}: {e}')
 
                 if not f.read(1):
-                    print('File exists but is empty')
+                    logger.warning('File exists but is empty')
                     data = {}
                 else:
                     raise e
 
     except FileNotFoundError as e:
-        print("No existing data file found")
+        logger.error("No existing file found for weather data")
         data = {}
 
     now = datetime.datetime.now()
+
     delta = datetime.timedelta(days=day_range)
+    if hour_range > 0 :
+        delta = datetime.timedelta(hours=hour_range)
 
     filtered_data = {}
-    if day_range > 0 :
+    if day_range > 0 or hour_range > 0 :
         for key,value in data.items() :
             try :
                 datapoint_time = datetime.datetime.fromtimestamp(int(key)/1000)
             except Exception as e:
-                print(f'Unable to parse timestamp in line (skipping): {key} -- {e}')
+                logger.debug(f'Unable to parse timestamp in line (skipping): {key} -- {e}')
                 continue
 
             # if a day_range was given (an integer > 0), test if this datapoint is younger than that day range,
@@ -216,7 +222,7 @@ def get_logged_sensor_data(filepath=sensor_data_filepath,day_range=0) :
                     if day_range > 0 and now - delta > datapoint_time :
                         continue
                 except Exception as e:
-                    print(f'Unable to parse timestamp in line (skipping): {line} -- {e}')
+                    logger.debug(f'Unable to parse timestamp in line (skipping): {line} -- {e}')
                     continue
 
                 try :
@@ -225,9 +231,9 @@ def get_logged_sensor_data(filepath=sensor_data_filepath,day_range=0) :
                         "rel_hum" : float(line_data[2])
                     }
                 except IndexError as e:
-                    print(f'Unable to parse line (skipping): {line} -- {e}')
+                    logger.debug(f'Unable to parse line (skipping): {line} -- {e}')
                 except ValueError as e:
-                    print(f'Unable to parse temp/humidity in line, assuming it contains a non-datapoint label: {line}')
+                    logger.debug(f'Unable to parse temp/humidity in line, assuming it contains a non-datapoint label: {line}')
 
                     match = re.search(r"\[.*\]", line)
                     result = match.group()
@@ -238,8 +244,6 @@ def get_logged_sensor_data(filepath=sensor_data_filepath,day_range=0) :
 
     except FileNotFoundError as e:
         print("No existing data file found")
-
-    # pprint(data)
 
     return data
 

@@ -5,6 +5,8 @@ import json
 import os
 import inspect
 
+from . import fetch_weather_data
+
 # actual path of the script's directory, regardless of where it's being called from
 path_ = os.path.dirname(inspect.getabsfile(inspect.currentframe()))
 
@@ -22,6 +24,9 @@ def run(client=None,plugs={}) :
         return
 
     therm_logger.info("Running thermostat scene...")
+
+    # fetch and save weather data (used by automation-gui)
+    fetch_weather_data.fetch_and_save()
 
     # get thermostat settings
     settings = get_user_settings()
@@ -99,7 +104,7 @@ def get_current_values() :
         from . import get_data
         values = get_data.get_current() # gets current sensor values, but also logs them to ./data/data.txt
         therm_logger.info(f"CURRENT VALUES ==== temp_c:{values['temp_c']}, temp_f:{values['temp_f']}, rel_hum:{values['rel_hum']}, abs_hum:{values['abs_hum']}")
-    except ModuleNotFoundError as e :
+    except (ModuleNotFoundError, NotImplementedError) as e :
         # if not running on raspberry pi with 'board' module, just try some test values
         values = {'temp_c': 24, 'temp_f': 80.6, 'rel_hum': 45, 'abs_hum': 11.55}
         therm_logger.error(f"Error: not running on raspberry pi, using test values: temp_c:{values['temp_c']}, temp_f:{values['temp_f']}, rel_hum:{values['rel_hum']}, abs_hum:{values['abs_hum']}")
@@ -181,7 +186,7 @@ def switchHumidifier(value="", client=None, plugs=[]) :
 
 
 def log_switch(value, deviceName) :
-    data_path = "scenes/basic/thermostat/data/data.txt"
+    data_path = f"{path_}/data/data.txt"
     now = datetime.now()
     therm_logger.debug(f"writing into {data_path} that we turned {deviceName} {value}...")
     try :
