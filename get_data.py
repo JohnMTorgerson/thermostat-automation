@@ -212,7 +212,7 @@ def get_logged_sensor_data(filepath=sensor_data_filepath,day_range=0) :
     # open file and format data
     try:
         with open(filepath,'r') as f:
-            for line in f :
+            for index,line in enumerate(f) :
                 line_data = line.split()
                 try :
                     key = int(line_data[0])
@@ -222,7 +222,7 @@ def get_logged_sensor_data(filepath=sensor_data_filepath,day_range=0) :
                     if day_range > 0 and now - delta > datapoint_time :
                         continue
                 except Exception as e:
-                    logger.debug(f'Unable to parse timestamp in line (skipping): {line} -- {e}')
+                    logger.debug(f'Unable to parse timestamp in line {index+1} (skipping): {line} -- {e}')
                     continue
 
                 try :
@@ -231,9 +231,9 @@ def get_logged_sensor_data(filepath=sensor_data_filepath,day_range=0) :
                         "rel_hum" : float(line_data[2])
                     }
                 except IndexError as e:
-                    logger.debug(f'Unable to parse line (skipping): {line} -- {e}')
+                    logger.debug(f'Unable to parse line {index+1} (skipping): {line} -- {e}')
                 except ValueError as e:
-                    logger.debug(f'Unable to parse temp/humidity in line, assuming it contains a non-datapoint label: {line}')
+                    # logger.debug(f'Unable to parse temp/humidity in line {index+1}, assuming it contains a non-datapoint label: {line}')
 
                     match = re.search(r"\[.*\]", line)
                     result = match.group()

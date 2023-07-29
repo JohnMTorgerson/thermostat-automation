@@ -32,7 +32,7 @@ def fetch_and_save(save_filepath=data_path, num_days=1, force=False):
     elif force :
         logger.debug("force==True, so fetching weather data...")
     else :
-        logger.debug("last entry >= 1 hour old, so fetching weather data...")
+        logger.debug(f"last entry >= {mins_to_wait}min old, so fetching weather data...")
 
     logger.info("Fetching and saving weather data...")
 
