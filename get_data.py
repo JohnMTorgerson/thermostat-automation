@@ -243,7 +243,7 @@ def get_logged_sensor_data(filepath=sensor_data_filepath,day_range=0) :
                         }
 
     except FileNotFoundError as e:
-        print("No existing data file found")
+        logger.error("No existing data file found")
 
     return data
 
