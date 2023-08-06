@@ -24,7 +24,7 @@ def fetch_and_save(save_filepath=data_path, num_days=1, force=False):
     # (since that's how often the source seems to be updated)
     now = round(datetime.now().timestamp()*1000)
     last_entry_time = get_last_entry_time()
-    logger.debug(f"(latest + {mins_to_wait}min) {last_entry_time + mins_to_wait * 60 * 1000} vs. (now) {now}")
+    # logger.debug(f"(latest + {mins_to_wait}min) {last_entry_time + mins_to_wait * 60 * 1000} vs. (now) {now}")
 
     if not force and last_entry_time + mins_to_wait * 60 * 1000 > now :
         logger.debug(f"latest entry is <= {mins_to_wait}min old, so NOT fetching weather data)")
@@ -134,7 +134,7 @@ def get_last_entry_time(filepath=data_path) :
         if timestamp > latest :
             latest = timestamp
 
-    logger.debug(f"latest == {latest}")
+    # logger.debug(f"latest == {latest}")
 
     return latest        
 

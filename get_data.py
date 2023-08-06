@@ -1,23 +1,18 @@
 import logging
-import os
-import inspect
-import pathlib
-print(pathlib.Path().absolute())
-import time
+# import pathlib
+# print(pathlib.Path().absolute())
 import json
 import datetime
-from pprint import pprint
 import re
-# import estimate_abs_hum
+
+# must use 'from .' for when the automation gui accesses this module
+# from . import estimate_abs_hum
+from . import write_data
+from . import weather_data_filepath
+from . import therm_data_filepath
 
 # create logger
 logger = logging.getLogger(f"HA.{__name__}")
-
-# actual path of the script's directory, regardless of where it's being called from
-path_ = os.path.dirname(inspect.getabsfile(inspect.currentframe()))
-
-weather_data_filepath = f"{path_}/data/weather_data.json"
-sensor_data_filepath = f"{path_}/data/data.txt"
 
 # get current temp and humidity values from sensors
 def get_current(log=True) :
@@ -115,42 +110,8 @@ def get_current(log=True) :
 
 
     # ====== save the values to file ====== #
-    if log == True :
-        new_record = f"{int(now.timestamp()*1000)} {temp_f} {rel_hum} ({now})\n"
-
-        try:
-            # check if new value is different from last recorded value
-            with open(sensor_data_filepath, "r") as f:
-                last_line = f.readlines()[-1].split()
-        except Exception as e:
-            last_line = [-1,-1,-1]
-            logger.error(f"Unable to write sensor data to data.txt — {repr(e)}")
-
-        try:
-            time_diff = (int(now.timestamp()*1000) - int(last_line[0])) / 1000 / 60
-            temp_diff = abs(float(last_line[1]) - temp_f)
-            rel_hum_diff = abs(float(last_line[2]) - rel_hum)
-
-            logger.debug(f"last sensor record: {last_line}")
-            logger.debug(f'Differences:\ntime_diff: {time_diff}\ntemp_diff: {temp_diff}\nhum_diff: {rel_hum_diff}')
-
-            # only log differences above the following thresholds
-            if temp_diff >= 0.2 or rel_hum_diff > 0 or time_diff > 30:
-                # print(last_line)
-                # print(float(last_line[1]))
-                # print(float(last_line[2]))
-                # print("different!!!!")
-
-                # and then only log every 10 minutes unless the following thresholds are met
-                if time_diff > 10 or temp_diff >= 0.5 or rel_hum_diff > 1:
-
-                    with open(sensor_data_filepath, "a") as f:
-                        f.write(new_record)
-
-        except (ValueError, IndexError) as error:
-            # if a line doesn't follow the format, (we might have added a comment), then ignore that and write a new line
-            with open(sensor_data_filepath, "a") as f:
-                f.write(new_record)
+    if log is True :
+        write_data.new_sensor_record(now,temp_f,rel_hum)
 
     return values
 
@@ -204,7 +165,7 @@ def get_logged_weather_data(filepath=weather_data_filepath,day_range=0,hour_rang
 
     return filtered_data
 
-def get_logged_sensor_data(filepath=sensor_data_filepath,day_range=0) :
+def get_logged_sensor_data(filepath=therm_data_filepath,day_range=0) :
     data = {}
     now = datetime.datetime.now()
     delta = datetime.timedelta(days=day_range)
@@ -246,6 +207,16 @@ def get_logged_sensor_data(filepath=sensor_data_filepath,day_range=0) :
         logger.error("No existing data file found")
 
     return data
+
+def get_most_recent_sensor_data(filepath=therm_data_filepath) :
+    data = get_logged_sensor_data(filepath=filepath,day_range=1)
+    last = 0
+    for timestamp in reversed(data) :
+        if timestamp > last and "temp" in data[timestamp]:
+            last = timestamp
+
+    return data[last]
+
 
 if __name__ == "__main__" :
     get_current()

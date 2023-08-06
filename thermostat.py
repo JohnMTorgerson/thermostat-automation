@@ -1,15 +1,12 @@
 # print("__package__, __name__ ==", __package__, __name__)
 import logging
 from datetime import datetime
-import json
-import os
-import inspect
 
+# must use 'from .' for when the automation gui accesses this module
 from . import fetch_weather_data
-
-# actual path of the script's directory, regardless of where it's being called from
-path_ = os.path.dirname(inspect.getabsfile(inspect.currentframe()))
-
+from . import get_data
+from . import write_data
+from . import settings
 
 # create logger
 therm_logger = logging.getLogger(f"HA.{__name__}")
@@ -29,34 +26,34 @@ def run(client=None,plugs={}) :
     fetch_weather_data.fetch_and_save()
 
     # get thermostat settings
-    settings = get_user_settings()
+    settings_ = settings.read()
 
     # get current values from sensor(s)
     values = get_current_values()
     temp = values["temp_f"]
-    if settings["use_abs_humidity"] :
+    if settings_["use_abs_humidity"] :
         humidity = values["abs_hum"]
     else :
         humidity = values["rel_hum"]
 
 
     # get target values set by user for both temp and humidity
-    temp_hum_cutoff =   settings["temp_hum_cutoff"]
-    temp_target =       settings["temp_target"]
-    temp_hyst =         settings["temp_hyst"]
-    if settings["use_abs_humidity"] :
+    temp_hum_cutoff =   settings_["temp_hum_cutoff"]
+    temp_target =       settings_["temp_target"]
+    temp_hyst =         settings_["temp_hyst"]
+    if settings_["use_abs_humidity"] :
         hum_units = "g/m³"
-        hum_max =           settings["abs_hum_max"]
-        hum_min =           settings["abs_hum_min"]
-        hum_hyst =          settings["abs_hum_hyst"]
+        hum_max =           settings_["abs_hum_max"]
+        hum_min =           settings_["abs_hum_min"]
+        hum_hyst =          settings_["abs_hum_hyst"]
     else :
         hum_units = "%"
-        hum_max =           settings["rel_hum_max"]
-        hum_min =           settings["rel_hum_min"]
-        hum_hyst =          settings["rel_hum_hyst"]
+        hum_max =           settings_["rel_hum_max"]
+        hum_min =           settings_["rel_hum_min"]
+        hum_hyst =          settings_["rel_hum_hyst"]
 
     # if thermostat is set to off, turn plugs off and return
-    if (settings["on"] == False) :
+    if (settings_["on"] == False) :
         therm_logger.info(f'************* THERMOSTAT IS SET TO OFF, (turning all devices off)')
         switchAC(value="off",client=client, plugs=plugs)
         switchHumidifier(value="off",client=client, plugs=plugs)
@@ -99,46 +96,32 @@ def run(client=None,plugs={}) :
     run_Humidifier()
 
 
-def get_current_values() :
+def get_current_values(log=True) :
+    # the optional 'log' param indicates primarily whether, when checking the sensor values,
+    # get_data.get_current() should also save those values to data.txt;
+    # when running the thermostat scene, we do want to do that,
+    # but when this function is called from update_json.py, we pass log=False because we don't need to do it again;
+    #
+    # we also take advantage of the variable here to determine whether the logger should log any messages in this function;
+    # we realize this may be confusing, hence the comment
     try :
-        from . import get_data
-        values = get_data.get_current() # gets current sensor values, but also logs them to ./data/data.txt
-        therm_logger.info(f"CURRENT VALUES ==== temp_c:{values['temp_c']}, temp_f:{values['temp_f']}, rel_hum:{values['rel_hum']}, abs_hum:{values['abs_hum']}")
+        values = get_data.get_current(log) # gets current sensor values, but also logs them to ./data/data.txt
+        if log : therm_logger.info(f"CURRENT VALUES ==== temp_c:{values['temp_c']}, temp_f:{values['temp_f']}, rel_hum:{values['rel_hum']}, abs_hum:{values['abs_hum']}")
     except (ModuleNotFoundError, NotImplementedError) as e :
-        # if not running on raspberry pi with 'board' module, just try some test values
-        values = {'temp_c': 24, 'temp_f': 80.6, 'rel_hum': 45, 'abs_hum': 11.55}
-        therm_logger.error(f"Error: not running on raspberry pi, using test values: temp_c:{values['temp_c']}, temp_f:{values['temp_f']}, rel_hum:{values['rel_hum']}, abs_hum:{values['abs_hum']}")
-        therm_logger.error(repr(e))
+        # if not running on raspberry pi with 'board' module, just use most recent values that were logged
+        # values = {'temp_c': 24, 'temp_f': 80.6, 'rel_hum': 45, 'abs_hum': 11.55}
+        values = get_data.get_most_recent_sensor_data()
+        values['temp_f'] = values['temp']
+        values['temp_c'] = round((values['temp_f'] - 32) * 5/9,1)
+        values['abs_hum'] = 0
+        if log : 
+            therm_logger.error(f"Error: not running on raspberry pi, using most recent logged values: temp_c:{values['temp_c']}, temp_f:{values['temp_f']}, rel_hum:{values['rel_hum']}, abs_hum:{values['abs_hum']}")
+            therm_logger.error(repr(e))
     except Exception as e :
         therm_logger.error(f"Other error getting temp/humidity values: {repr(e)}")
         raise e
 
     return values
-
-def get_user_settings() :
-    try:
-        with open(f"{path_}/settings.json", "r") as f :
-            settings = json.load(f)
-    except Exception as e:
-        therm_logger.error(f"Error: Unable to retrieve thermostat settings from file. Temporarily using defaults\n{e}")
-        # default values designed to keep the A/C and Humidifier off until the problem is fixed
-        settings = {
-            "on" : False,
-            "temp_hum_cutoff" : 100,
-            "temp_target" : 212,
-            "temp_hyst" : 1,
-            "rel_hum_max" : 100,
-            "rel_hum_min" : 0,
-            "rel_hum_hyst" : 1,
-            "use_abs_hum" : False,
-            "abs_hum_max": 1000.0,
-            "abs_hum_min": 0.0,
-            "abs_hum_hyst": 1.0
-        }
-
-    therm_logger.info(f"Thermostat settings: {settings}")
-
-    return settings
 
 def switchAC(value="", client=None, plugs=[]) :
     previous_value = "off"
@@ -186,15 +169,7 @@ def switchHumidifier(value="", client=None, plugs=[]) :
 
 
 def log_switch(value, deviceName) :
-    data_path = f"{path_}/data/data.txt"
-    now = datetime.now()
-    therm_logger.debug(f"writing into {data_path} that we turned {deviceName} {value}...")
-    try :
-        with open(data_path, "a") as f:
-            f.write(f"{int(now.timestamp()*1000)} [TURNED {deviceName} {value}] ({now})\n")
-            therm_logger.debug("...successfully wrote to file!")
-    except Exception as e :
-        therm_logger.error(f"Error: unable to log switch action to data file: {e}")
+    write_data.new_switch_record(datetime.now(),deviceName,value)
 
     # run get_current_values() again, just to make sure we log the current sensor values into the data file right after we switch the A/C on/off
     get_current_values()
