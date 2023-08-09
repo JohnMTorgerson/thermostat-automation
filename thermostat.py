@@ -13,6 +13,7 @@ therm_logger = logging.getLogger(f"HA.{__name__}")
 
 
 def run(client=None,plugs={}) :
+
     plugs_is_empty = True
     for list_of_plugs_by_controlling in plugs :
         if len(list_of_plugs_by_controlling) > 0 :
@@ -58,6 +59,19 @@ def run(client=None,plugs={}) :
         switchAC(value="off",client=client, plugs=plugs)
         switchHumidifier(value="off",client=client, plugs=plugs)
         return
+    
+    # lastly, some housekeeping:
+    # if this is the first time the scene has been run after midnight,
+    # we want to record the current target values in the thermostat data file;
+    # the reason for this is so the automation-gui can get an update on what
+    # they are every day (in case they haven't been changed manually in a while)
+    if first_run_of_day() :
+        therm_logger.debug("Writing out temp_target and rel_hum_max into data.txt ...")
+        write_data.new_ctrl_change_record(datetime.now(),{
+            "temp_target" : temp_target,
+            "rel_hum_max" : settings_["rel_hum_max"]
+        })
+
 
     # turn A/C on or off based on temp and humidity targets vs current sensor values
     def run_AC() :
@@ -76,18 +90,18 @@ def run(client=None,plugs={}) :
     # turn Humidifier on or off based on temp and humidity targets vs current sensor values
     def run_Humidifier() :
         # if above minimum turn humidifier off
-        if (humidity >= hum_min):
+        if (humidity >= hum_min + hum_hyst):
             # turn off Humidifier
             therm_logger.info(f'Humidity is {humidity:.2f}, {(humidity-hum_min):.2f} above min: TURNING HUMIDIFIER OFF')
             switchHumidifier(value="off",client=client, plugs=plugs)
         # else if below minimum, minus hysteresis value, turn humidifier on
-        elif (humidity < hum_min - hum_hyst):
+        elif (humidity < hum_min):
             # turn on Humidifier
-            therm_logger.info(f'Humidity is {humidity:.2f}, {(humidity-hum_min):.2f} below min: TURNING HUMIDIFIER ON')
+            therm_logger.info(f'Humidity is {humidity:.2f}, {(hum_min-humidity):.2f} below min: TURNING HUMIDIFIER ON')
             switchHumidifier(value="on",client=client, plugs=plugs)
         else :
             # within hysteresis range, so do nothing, do not change state
-            therm_logger.info(f"Humidity is below minimum but within hysteresis range ({hum_min - hum_hyst:.2f}{hum_units} <= {(humidity):.2f}{hum_units} < {hum_min}{hum_units}, not changing Humidifier state")
+            therm_logger.info(f"Humidity is within hysteresis range ({(hum_min):.2f}{hum_units} <= {(humidity):.2f}{hum_units} < {hum_min+hum_hyst}{hum_units}, not changing Humidifier state")
 
     # run A/C (if thresholds merit)
     run_AC()
@@ -110,7 +124,7 @@ def get_current_values(log=True) :
     except (ModuleNotFoundError, NotImplementedError) as e :
         # if not running on raspberry pi with 'board' module, just use most recent values that were logged
         # values = {'temp_c': 24, 'temp_f': 80.6, 'rel_hum': 45, 'abs_hum': 11.55}
-        values = get_data.get_most_recent_sensor_data()
+        values = get_data.get_most_recent_sensor_data()[1]
         values['temp_f'] = values['temp']
         values['temp_c'] = round((values['temp_f'] - 32) * 5/9,1)
         values['abs_hum'] = 0
@@ -174,6 +188,14 @@ def log_switch(value, deviceName) :
     # run get_current_values() again, just to make sure we log the current sensor values into the data file right after we switch the A/C on/off
     get_current_values()
 
+def first_run_of_day() :
+    midnight = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    last_entry_time = get_data.get_most_recent_sensor_data(any_line=True)[0]
+    if datetime.fromtimestamp(last_entry_time/1000) < midnight :
+        therm_logger.debug("First run of the day!!")
+        return True
+    therm_logger.debug("NOT first run of the day")
+    return False
 
 if __name__ == "__main__" :
     run()

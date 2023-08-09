@@ -208,14 +208,17 @@ def get_logged_sensor_data(filepath=therm_data_filepath,day_range=0) :
 
     return data
 
-def get_most_recent_sensor_data(filepath=therm_data_filepath) :
+def get_most_recent_sensor_data(filepath=therm_data_filepath,any_line=False) :
+    # 'any_line' says whether to return the most recent line (regardless of content)
+    #            or just the most recent line of actual logged sensor data
+
     data = get_logged_sensor_data(filepath=filepath,day_range=1)
     last = 0
     for timestamp in reversed(data) :
-        if timestamp > last and "temp" in data[timestamp]:
+        if timestamp > last and ("temp" in data[timestamp] or any_line):
             last = timestamp
 
-    return data[last]
+    return (last,data[last])
 
 
 if __name__ == "__main__" :
