@@ -47,8 +47,9 @@ def new_switch_record(time_,deviceName,value) :
     _write(f"{int(time_.timestamp()*1000)} [TURNED {deviceName} {value}] ({time_})\n")
 
 def new_ctrl_change_record(time_,ctrl_changes) :
-    for key,val in ctrl_changes.items() :
-        _write(f"{int(time_.timestamp()*1000)} [SET {key} to {val}] ({time_})\n")
+    for index, (key, val) in enumerate(ctrl_changes.items()):
+    # for key,val in ctrl_changes.items() :
+        _write(f"{int(time_.timestamp()*1000) + index} [SET {key} to {val}] ({time_})\n")
 
 def _write(record) :
     try:
